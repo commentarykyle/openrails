@@ -320,6 +320,8 @@ namespace ORTS.Settings
         public bool IsDirectXFeatureLevelIncluded(DirectXFeature level) => level <= DirectXFeatureEnum;
         [Default(true)]
         public bool ShadowMapBlur { get; set; }
+        [Default(false)]
+        public bool HemisphericAmbient { get; set; }
         [Default(4)]
         public int ShadowMapCount { get; set; }
         [Default(0)]

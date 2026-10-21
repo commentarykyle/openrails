@@ -43,6 +43,9 @@ float4   HeadlightPosition;     // xyz = position; w = lighting fading.
 float4   HeadlightDirection;    // xyz = normalized direction (length = distance to light); w = 0.5 * (1 - min dot product).
 float    HeadlightRcpDistance;  // reciprocal length = reciprocal distance to light
 float4   HeadlightColor;        // rgba = color
+float3   SkyAmbientColor;       // Ambient multiplier for surfaces facing up
+float3   GroundAmbientColor;    // Ambient multiplier for surfaces facing down
+float    HemisphereAmbientStrength; // 0 = disabled (original lighting), 1 = full effect
 float2   Overcast;      // Lower saturation & brightness when overcast. x = FullBrightness, y = HalfBrightness
 float3   ViewerPos;     // Viewer's world coordinates.
 float    ImageTextureIsNight;
@@ -417,6 +420,15 @@ float _PSGetShadowEffect(uniform bool ShaderModel3, uniform bool NormalLighting,
 	return saturate(not_shadowed + p);
 }
 
+// Applies hemispheric ambient lighting: light from the sky above and bounced from the ground below,
+// blended by the surface normal. This also darkens undersides, approximating ambient occlusion.
+// Hemisphere lighting as described in Akenine-Moller et al., "Real-Time Rendering", ambient and environment lighting.
+void _PSApplyHemisphereAmbient(inout float3 Color, in VERTEX_OUTPUT In)
+{
+	float3 hemisphere = lerp(GroundAmbientColor, SkyAmbientColor, In.Normal_Light.y * 0.5 + 0.5);
+	Color *= lerp(1, hemisphere, HemisphereAmbientStrength);
+}
+
 // Gets the overcast color.
 float3 _PSGetOvercastColor(in float4 Color, in VERTEX_OUTPUT In)
 {
@@ -475,6 +487,8 @@ float4 PSImage(uniform bool ShaderModel3, uniform bool ClampTexCoords, in VERTEX
 	litColor += _PSGetSpecularEffect(In) * _PSGetShadowEffect(ShaderModel3, true, In);
 	// Overcast blanks out ambient, shadow and specular effects (so use original Color).
 	litColor = lerp(litColor, _PSGetOvercastColor(Color, In), Overcast.x);
+	// Hemispheric ambient (not available in shader model 2 due to instruction limits).
+	if (ShaderModel3) _PSApplyHemisphereAmbient(litColor, In);
 	// Night-time darkens everything, except night-time textures.
 	litColor *= NightColorModifier;
 	// Headlights effect use original Color.
@@ -532,6 +546,8 @@ float4 PSTerrain(uniform bool ShaderModel3, in VERTEX_OUTPUT In) : COLOR0
 	// No specular effect for terrain.
 	// Overcast blanks out ambient, shadow and specular effects (so use original Color).
 	litColor = lerp(litColor, _PSGetOvercastColor(Color, In), Overcast.x);
+	// Hemispheric ambient (not available in shader model 2 due to instruction limits).
+	if (ShaderModel3) _PSApplyHemisphereAmbient(litColor, In);
 	// Night-time darkens everything, except night-time textures.
 	litColor *= NightColorModifier;
 	// Overlay image for terrain.

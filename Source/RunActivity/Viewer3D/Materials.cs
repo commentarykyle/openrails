@@ -489,6 +489,22 @@ namespace Orts.Viewer3D
 
         public static Color FogColor = new Color(110, 110, 110, 255);
 
+        void UpdateHemisphereAmbient()
+        {
+            if (!Viewer.Settings.HemisphericAmbient)
+            {
+                SceneryShader.SetHemisphereAmbient(Vector3.One, Vector3.One, 0);
+                return;
+            }
+            var overcast = Viewer.Settings.UseMSTSEnv ? Viewer.World.MSTSSky.mstsskyovercastFactor : Viewer.Simulator.Weather.CloudCoverFactor;
+            SceneryShader.SetHemisphereAmbient(SkyAmbientColor, GroundAmbientColor, 1 - HemisphereAmbientOvercastReduction * MathHelper.Clamp(overcast, 0, 1));
+        }
+
+        // Hemispheric ambient: slightly cool light from the sky, darker warm light bounced from the ground.
+        static readonly Vector3 SkyAmbientColor = new Vector3(1.02f, 1.03f, 1.08f);
+        static readonly Vector3 GroundAmbientColor = new Vector3(0.72f, 0.70f, 0.66f);
+        const float HemisphereAmbientOvercastReduction = 0.5f; // Overcast skies give more even ambient light
+
         internal Vector3 sunDirection;
         bool lastLightState;
         double fadeStartTimer;
@@ -558,6 +574,7 @@ namespace Orts.Viewer3D
                 SceneryShader.SetHeadlightOff();
             }
             // End headlight illumination
+            UpdateHemisphereAmbient();
             if (Viewer.Settings.UseMSTSEnv == false)
             {
                 SceneryShader.Overcast = Viewer.Simulator.Weather.CloudCoverFactor;

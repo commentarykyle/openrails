@@ -56,6 +56,9 @@ namespace Orts.Viewer3D
         readonly EffectParameter headlightDirection;
         readonly EffectParameter headlightRcpDistance;
         readonly EffectParameter headlightColor;
+        readonly EffectParameter skyAmbientColor;
+        readonly EffectParameter groundAmbientColor;
+        readonly EffectParameter hemisphereAmbientStrength;
         readonly EffectParameter overcast;
         readonly EffectParameter viewerPos;
         readonly EffectParameter imageTextureIsNight;
@@ -173,6 +176,16 @@ namespace Orts.Viewer3D
             headlightPosition.SetValue(Vector4.Zero);
         }
 
+        /// <summary>
+        /// Sets the hemispheric ambient lighting; a strength of 0 leaves the original lighting unchanged.
+        /// </summary>
+        public void SetHemisphereAmbient(Vector3 skyColor, Vector3 groundColor, float strength)
+        {
+            skyAmbientColor.SetValue(skyColor);
+            groundAmbientColor.SetValue(groundColor);
+            hemisphereAmbientStrength.SetValue(strength);
+        }
+
         public float SignalLightIntensity { set { signalLightIntensity.SetValue(value); } }
 
         public float Overcast { set { overcast.SetValue(new Vector2(value, value / 2)); } }
@@ -210,6 +223,9 @@ namespace Orts.Viewer3D
             headlightDirection = Parameters["HeadlightDirection"];
             headlightRcpDistance = Parameters["HeadlightRcpDistance"];
             headlightColor = Parameters["HeadlightColor"];
+            skyAmbientColor = Parameters["SkyAmbientColor"];
+            groundAmbientColor = Parameters["GroundAmbientColor"];
+            hemisphereAmbientStrength = Parameters["HemisphereAmbientStrength"];
             overcast = Parameters["Overcast"];
             viewerPos = Parameters["ViewerPos"];
             imageTextureIsNight = Parameters["ImageTextureIsNight"];

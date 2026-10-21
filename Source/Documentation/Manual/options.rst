@@ -883,6 +883,32 @@ When this option is selected, ORTS will:
 - use high-visible magenta for missing textures (instead of grey).
 
 
+.. _options-graphics-effects:
+
+Graphics effects
+----------------
+
+These optional effects are all disabled by default; when disabled, the
+game looks exactly as it did before.
+
+- *Sky and ground ambient light*: surfaces facing up receive slightly
+  cool light from the sky and surfaces facing down receive darker, warm
+  light bounced from the ground. This gives more depth to objects and
+  darkens undersides and overhangs. The effect is reduced under overcast
+  skies. It is not available with DirectX feature level 9_1.
+- *Ambient occlusion*: darkens creases, corners and places where objects
+  meet, using the depth of the scene on screen. It applies to the world
+  outside only, not to cab interiors, and is not shown in the 2D cab view.
+  Requires DirectX feature level 10_0 and draws the scene's depth a
+  second time, so it may reduce the frame rate.
+- *Soft shadows*: blurs the dynamic shadow maps more widely, for softer
+  shadow edges. Requires *Dynamic shadows* to be enabled.
+- *Post-processing (color grading)*: applies a gentle contrast curve, a
+  small saturation increase and a subtle vignette to the 3D view. Menus
+  and on-screen windows are not affected. Requires DirectX feature
+  level 10_0.
+
+
 Correct questionable braking parameters
 ---------------------------------------
 

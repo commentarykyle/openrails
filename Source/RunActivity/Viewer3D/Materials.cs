@@ -265,6 +265,7 @@ namespace Orts.Viewer3D
         public readonly SkyShader SkyShader;
         public readonly DebugShader DebugShader;
         public readonly CabShader CabShader;
+        public readonly PostProcessShader PostProcessShader;
 
         public static Texture2D MissingTexture;
         public static Texture2D DefaultSnowTexture;
@@ -306,6 +307,9 @@ namespace Orts.Viewer3D
             SkyShader = new SkyShader(viewer.RenderProcess.GraphicsDevice);
             DebugShader = new DebugShader(viewer.RenderProcess.GraphicsDevice);
             CabShader = new CabShader(viewer.RenderProcess.GraphicsDevice, Vector4.One, Vector4.One, Vector3.One, Vector3.One);
+            // Only needed by the optional ambient occlusion and post-processing effects, which require feature level 10_0.
+            if (viewer.Settings.IsDirectXFeatureLevelIncluded(ORTS.Settings.UserSettings.DirectXFeature.Level10_0))
+                PostProcessShader = new PostProcessShader(viewer.RenderProcess.GraphicsDevice);
 
             MissingTexture = SharedTextureManager.GetInternalMissingTexture(viewer.RenderProcess.GraphicsDevice);
 
@@ -1060,6 +1064,11 @@ namespace Orts.Viewer3D
         IEnumerator<EffectPass> ShaderPassesBlur;
         VertexBuffer BlurVertexBuffer;
 
+        /// <summary>
+        /// Texture used for items without a shadow texture (such as terrain); only set while drawing the camera depth.
+        /// </summary>
+        public Texture2D FallbackTexture;
+
         public enum Mode
         {
             Normal,
@@ -1104,7 +1113,7 @@ namespace Orts.Viewer3D
                 foreach (var item in renderItems)
                 {
                     var wvp = item.XNAMatrix * viewproj;
-                    shader.SetData(ref wvp, item.Material.GetShadowTexture());
+                    shader.SetData(ref wvp, item.Material.GetShadowTexture() ?? FallbackTexture);
                     ShaderPasses.Current.Apply();
                     // SamplerStates can only be set after the ShaderPasses.Current.Apply().
                     graphicsDevice.SamplerStates[0] = item.Material.GetShadowTextureAddressMode();
@@ -1118,7 +1127,7 @@ namespace Orts.Viewer3D
             var wvp = Matrix.Identity;
 
             var shader = Viewer.MaterialManager.ShadowMapShader;
-            shader.CurrentTechnique = shader.Techniques["ShadowMapBlur"];
+            shader.CurrentTechnique = shader.Techniques[Viewer.Settings.SoftShadows ? "ShadowMapBlurSoft" : "ShadowMapBlur"];
             shader.SetBlurData(ref wvp);
             if (ShaderPassesBlur == null) ShaderPassesBlur = shader.CurrentTechnique.Passes.GetEnumerator();
 

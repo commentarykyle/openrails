@@ -269,6 +269,10 @@ namespace Menu
             trackAdhesionFactorChange.Value = Settings.AdhesionFactorChange;
             trackAdhesionFactor_ValueChanged(null, null);
             checkShapeWarnings.Checked = !Settings.SuppressShapeWarnings;   // Inverted as "Show warnings" is better UI than "Suppress warnings"
+            checkHemisphericAmbient.Checked = Settings.HemisphericAmbient;
+            checkAmbientOcclusion.Checked = Settings.AmbientOcclusion;
+            checkSoftShadows.Checked = Settings.SoftShadows;
+            checkPostProcessing.Checked = Settings.PostProcessing;
             checkCorrectQuestionableBrakingParams.Checked = Settings.CorrectQuestionableBrakingParams;
             numericActRandomizationLevel.Value = Settings.ActRandomizationLevel;
             numericActWeatherRandomizationLevel.Value = Settings.ActWeatherRandomizationLevel;
@@ -502,6 +506,10 @@ namespace Menu
             Settings.AdhesionFactor = (int)trackAdhesionFactor.Value;
             Settings.AdhesionFactorChange = (int)trackAdhesionFactorChange.Value;
             Settings.SuppressShapeWarnings = !checkShapeWarnings.Checked;
+            Settings.HemisphericAmbient = checkHemisphericAmbient.Checked;
+            Settings.AmbientOcclusion = checkAmbientOcclusion.Checked;
+            Settings.SoftShadows = checkSoftShadows.Checked;
+            Settings.PostProcessing = checkPostProcessing.Checked;
             Settings.CorrectQuestionableBrakingParams = checkCorrectQuestionableBrakingParams.Checked;
             Settings.ActRandomizationLevel = (int)numericActRandomizationLevel.Value;
             Settings.ActWeatherRandomizationLevel = (int)numericActWeatherRandomizationLevel.Value;

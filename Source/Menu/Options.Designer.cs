@@ -221,6 +221,11 @@
             this.AdhesionFactorChangeValueLabel = new System.Windows.Forms.Label();
             this.AdhesionFactorValueLabel = new System.Windows.Forms.Label();
             this.checkShapeWarnings = new System.Windows.Forms.CheckBox();
+            this.labelGraphicsEffects = new System.Windows.Forms.Label();
+            this.checkHemisphericAmbient = new System.Windows.Forms.CheckBox();
+            this.checkAmbientOcclusion = new System.Windows.Forms.CheckBox();
+            this.checkSoftShadows = new System.Windows.Forms.CheckBox();
+            this.checkPostProcessing = new System.Windows.Forms.CheckBox();
             this.AdhesionLevelValue = new System.Windows.Forms.Label();
             this.AdhesionLevelLabel = new System.Windows.Forms.Label();
             this.trackAdhesionFactorChange = new System.Windows.Forms.TrackBar();
@@ -2630,6 +2635,11 @@
             this.tabPageExperimental.Controls.Add(this.AdhesionFactorChangeValueLabel);
             this.tabPageExperimental.Controls.Add(this.AdhesionFactorValueLabel);
             this.tabPageExperimental.Controls.Add(this.checkShapeWarnings);
+            this.tabPageExperimental.Controls.Add(this.labelGraphicsEffects);
+            this.tabPageExperimental.Controls.Add(this.checkHemisphericAmbient);
+            this.tabPageExperimental.Controls.Add(this.checkAmbientOcclusion);
+            this.tabPageExperimental.Controls.Add(this.checkSoftShadows);
+            this.tabPageExperimental.Controls.Add(this.checkPostProcessing);
             this.tabPageExperimental.Controls.Add(this.AdhesionLevelValue);
             this.tabPageExperimental.Controls.Add(this.AdhesionLevelLabel);
             this.tabPageExperimental.Controls.Add(this.trackAdhesionFactorChange);
@@ -2874,6 +2884,55 @@
             this.checkShapeWarnings.UseVisualStyleBackColor = true;
             this.checkShapeWarnings.MouseEnter += new System.EventHandler(this.HelpIcon_MouseEnter);
             this.checkShapeWarnings.MouseLeave += new System.EventHandler(this.HelpIcon_MouseLeave);
+            //
+            // labelGraphicsEffects
+            //
+            this.labelGraphicsEffects.AutoSize = true;
+            this.labelGraphicsEffects.Location = new System.Drawing.Point(24, 216);
+            this.labelGraphicsEffects.Name = "labelGraphicsEffects";
+            this.labelGraphicsEffects.Size = new System.Drawing.Size(232, 13);
+            this.labelGraphicsEffects.TabIndex = 50;
+            this.labelGraphicsEffects.Text = "Graphics effects (some require DirectX 10):";
+            //
+            // checkHemisphericAmbient
+            //
+            this.checkHemisphericAmbient.AutoSize = true;
+            this.checkHemisphericAmbient.Location = new System.Drawing.Point(27, 235);
+            this.checkHemisphericAmbient.Name = "checkHemisphericAmbient";
+            this.checkHemisphericAmbient.Size = new System.Drawing.Size(162, 17);
+            this.checkHemisphericAmbient.TabIndex = 51;
+            this.checkHemisphericAmbient.Text = "Sky and ground ambient light";
+            this.checkHemisphericAmbient.UseVisualStyleBackColor = true;
+            //
+            // checkAmbientOcclusion
+            //
+            this.checkAmbientOcclusion.AutoSize = true;
+            this.checkAmbientOcclusion.Location = new System.Drawing.Point(27, 258);
+            this.checkAmbientOcclusion.Name = "checkAmbientOcclusion";
+            this.checkAmbientOcclusion.Size = new System.Drawing.Size(115, 17);
+            this.checkAmbientOcclusion.TabIndex = 52;
+            this.checkAmbientOcclusion.Text = "Ambient occlusion";
+            this.checkAmbientOcclusion.UseVisualStyleBackColor = true;
+            //
+            // checkSoftShadows
+            //
+            this.checkSoftShadows.AutoSize = true;
+            this.checkSoftShadows.Location = new System.Drawing.Point(27, 281);
+            this.checkSoftShadows.Name = "checkSoftShadows";
+            this.checkSoftShadows.Size = new System.Drawing.Size(91, 17);
+            this.checkSoftShadows.TabIndex = 53;
+            this.checkSoftShadows.Text = "Soft shadows";
+            this.checkSoftShadows.UseVisualStyleBackColor = true;
+            //
+            // checkPostProcessing
+            //
+            this.checkPostProcessing.AutoSize = true;
+            this.checkPostProcessing.Location = new System.Drawing.Point(27, 304);
+            this.checkPostProcessing.Name = "checkPostProcessing";
+            this.checkPostProcessing.Size = new System.Drawing.Size(170, 17);
+            this.checkPostProcessing.TabIndex = 54;
+            this.checkPostProcessing.Text = "Post-processing (color grading)";
+            this.checkPostProcessing.UseVisualStyleBackColor = true;
             // 
             // AdhesionLevelValue
             // 
@@ -3251,6 +3310,11 @@
         private System.Windows.Forms.Label labelOtherUnits;
         private System.Windows.Forms.ComboBox comboOtherUnits;
         private System.Windows.Forms.CheckBox checkShapeWarnings;
+        private System.Windows.Forms.Label labelGraphicsEffects;
+        private System.Windows.Forms.CheckBox checkHemisphericAmbient;
+        private System.Windows.Forms.CheckBox checkAmbientOcclusion;
+        private System.Windows.Forms.CheckBox checkSoftShadows;
+        private System.Windows.Forms.CheckBox checkPostProcessing;
         private System.Windows.Forms.Label labelDayAmbientLight;
         private System.Windows.Forms.CheckBox checkEnableTCSScripts;
         private System.Windows.Forms.CheckBox checkAutoSaveActive;

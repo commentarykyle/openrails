@@ -389,6 +389,24 @@ namespace Orts.Viewer3D
 
         internal RenderTarget2D RenderSurface;
         SpriteBatchMaterial RenderSurfaceMaterial;
+        RenderTarget2D OutputSurface;
+
+        // Shared data for the optional ambient occlusion and post-processing effects.
+        static RenderTarget2D DepthSurface;
+        static RenderTarget2D PostProcessSurface;
+        static VertexBuffer FullScreenQuad;
+        static readonly BlendState MultiplyBlendState = new BlendState
+        {
+            ColorSourceBlend = Blend.DestinationColor,
+            ColorDestinationBlend = Blend.Zero,
+            AlphaSourceBlend = Blend.Zero,
+            AlphaDestinationBlend = Blend.One,
+        };
+        const float DepthClearM = 1e6f; // Depth used where nothing is drawn (sky)
+        PostProcessShader PostProcessShader;
+
+        bool IsAmbientOcclusionEnabled => Game.Settings.AmbientOcclusion && PostProcessShader != null && !(Camera is CabCamera);
+        bool IsPostProcessingEnabled => Game.Settings.PostProcessing && PostProcessShader != null;
 
         readonly Material DummyBlendedMaterial;
 		readonly Dictionary<Material, RenderItemCollection>[] RenderItems = new Dictionary<Material, RenderItemCollection>[(int)RenderPrimitiveSequence.Sentinel];
@@ -463,6 +481,31 @@ namespace Orts.Viewer3D
                 Game.RenderProcess.GraphicsDevice.PresentationParameters.MultiSampleCount,
                 RenderTargetUsage.PreserveContents
             );
+            if (Game.Settings.AmbientOcclusion || Game.Settings.PostProcessing)
+                CreatePostProcessSurfaces(RenderSurface.Width, RenderSurface.Height);
+        }
+
+        [CallOnThread("Render")]
+        void CreatePostProcessSurfaces(int width, int height)
+        {
+            var graphicsDevice = Game.RenderProcess.GraphicsDevice;
+            if (DepthSurface == null || DepthSurface.Width != width || DepthSurface.Height != height)
+            {
+                DepthSurface?.Dispose();
+                PostProcessSurface?.Dispose();
+                DepthSurface = new RenderTarget2D(graphicsDevice, width, height, false, SurfaceFormat.Single, DepthFormat.Depth24, 0, RenderTargetUsage.DiscardContents);
+                PostProcessSurface = new RenderTarget2D(graphicsDevice, width, height, false, graphicsDevice.PresentationParameters.BackBufferFormat, DepthFormat.Depth24Stencil8, 0, RenderTargetUsage.PreserveContents);
+            }
+            if (FullScreenQuad == null)
+            {
+                FullScreenQuad = new VertexBuffer(graphicsDevice, typeof(VertexPositionTexture), 4, BufferUsage.WriteOnly);
+                FullScreenQuad.SetData(new[] {
+                    new VertexPositionTexture(new Vector3(-1, +1, 0), new Vector2(0, 0)),
+                    new VertexPositionTexture(new Vector3(+1, +1, 0), new Vector2(1, 0)),
+                    new VertexPositionTexture(new Vector3(-1, -1, 0), new Vector2(0, 1)),
+                    new VertexPositionTexture(new Vector3(+1, -1, 0), new Vector2(1, 1)),
+                });
+            }
         }
 
         public void Clear()
@@ -511,6 +554,8 @@ namespace Orts.Viewer3D
                 ShadowMapMaterial = (ShadowMapMaterial)viewer.MaterialManager.Load("ShadowMap");
             if (SceneryShader == null)
                 SceneryShader = viewer.MaterialManager.SceneryShader;
+            if (PostProcessShader == null)
+                PostProcessShader = viewer.MaterialManager.PostProcessShader;
         }
 
         public void SetCamera(Camera camera)
@@ -729,6 +774,9 @@ namespace Orts.Viewer3D
             if (Game.Settings.DynamicShadows && (RenderProcess.ShadowMapCount > 0) && ShadowMapMaterial != null)
                 DrawShadows(graphicsDevice, logging);
 
+            if (IsAmbientOcclusionEnabled && ShadowMapMaterial != null)
+                DrawDepth(graphicsDevice, logging);
+
             DrawSimple(graphicsDevice, logging);
 
             for (var i = 0; i < (int)RenderPrimitiveSequence.Sentinel; i++)
@@ -810,12 +858,83 @@ namespace Orts.Viewer3D
         }
 
         /// <summary>
+        /// Draws the linear depth of the opaque world for ambient occlusion, reusing the shadow map depth shader with the camera view.
+        /// </summary>
+        void DrawDepth(GraphicsDevice graphicsDevice, bool logging)
+        {
+            if (logging) Console.WriteLine("  DrawDepth {");
+            graphicsDevice.SetRenderTarget(DepthSurface);
+            graphicsDevice.Clear(ClearOptions.Target | ClearOptions.DepthBuffer, new Vector4(DepthClearM), 1, 0);
+            ShadowMapMaterial.FallbackTexture = Popups.WindowManager.WhiteTexture;
+
+            foreach (var sequenceMaterial in RenderItems[(int)RenderPrimitiveSequence.WorldOpaque])
+            {
+                var material = sequenceMaterial.Key;
+                if (sequenceMaterial.Value.Count == 0 || material is TerrainSharedDistantMountain)
+                    continue;
+                if (material is ForestMaterial)
+                    ShadowMapMaterial.SetState(graphicsDevice, ShadowMapMaterial.Mode.Forest);
+                else if (material is SceneryMaterial || material is TerrainMaterial)
+                    ShadowMapMaterial.SetState(graphicsDevice, ShadowMapMaterial.Mode.Normal);
+                else
+                    continue;
+                if (material is TerrainMaterial)
+                    graphicsDevice.Indices = TerrainPrimitive.SharedPatchIndexBuffer;
+                if (logging) Console.WriteLine("    {0,-5} * {1}", sequenceMaterial.Value.Count, material);
+                ShadowMapMaterial.Render(graphicsDevice, sequenceMaterial.Value, ref XNACameraView, ref XNACameraProjection);
+            }
+
+            ShadowMapMaterial.FallbackTexture = null;
+            ShadowMapMaterial.ResetState(graphicsDevice);
+            graphicsDevice.SetRenderTarget(null);
+            if (logging) Console.WriteLine("  }");
+        }
+
+        /// <summary>
+        /// Darkens the opaque world already drawn by multiplying in the ambient occlusion.
+        /// </summary>
+        void ApplyAmbientOcclusion(GraphicsDevice graphicsDevice)
+        {
+            PostProcessShader.SetAmbientOcclusionData(DepthSurface, ref XNACameraProjection);
+            DrawFullScreen(graphicsDevice, MultiplyBlendState);
+        }
+
+        /// <summary>
+        /// Color grades the scene into the post-processing surface, which then receives the remaining (overlay) drawing.
+        /// </summary>
+        void ApplyPostProcessing(GraphicsDevice graphicsDevice)
+        {
+            graphicsDevice.SetRenderTarget(PostProcessSurface);
+            graphicsDevice.Clear(ClearOptions.DepthBuffer | ClearOptions.Stencil, Color.Transparent, 1, 0);
+            PostProcessShader.SetPostProcessData(OutputSurface);
+            DrawFullScreen(graphicsDevice, BlendState.Opaque);
+            OutputSurface = PostProcessSurface;
+        }
+
+        void DrawFullScreen(GraphicsDevice graphicsDevice, BlendState blendState)
+        {
+            graphicsDevice.BlendState = blendState;
+            graphicsDevice.DepthStencilState = DepthStencilState.None;
+            graphicsDevice.RasterizerState = RasterizerState.CullNone;
+            graphicsDevice.SetVertexBuffer(FullScreenQuad);
+            foreach (var pass in PostProcessShader.CurrentTechnique.Passes)
+            {
+                pass.Apply();
+                graphicsDevice.DrawPrimitives(PrimitiveType.TriangleStrip, 0, 2);
+            }
+            graphicsDevice.BlendState = BlendState.Opaque;
+            graphicsDevice.DepthStencilState = DepthStencilState.Default;
+            graphicsDevice.RasterizerState = RasterizerState.CullCounterClockwise;
+        }
+
+        /// <summary>
         /// Executed in the RenderProcess thread - simple draw
         /// </summary>
         /// <param name="graphicsDevice"></param>
         /// <param name="logging"></param>
         void DrawSimple(GraphicsDevice graphicsDevice, bool logging)
         {
+            OutputSurface = RenderSurface;
             if (RenderSurfaceMaterial != null)
             {
                 graphicsDevice.SetRenderTarget(RenderSurface);
@@ -845,7 +964,7 @@ namespace Orts.Viewer3D
                 graphicsDevice.SetRenderTarget(null);
                 graphicsDevice.Clear(ClearOptions.Target | ClearOptions.DepthBuffer | ClearOptions.Stencil, Color.Transparent, 1, 0);
                 RenderSurfaceMaterial.SetState(graphicsDevice, null);
-                RenderSurfaceMaterial.SpriteBatch.Draw(RenderSurface, Vector2.Zero, Color.White);
+                RenderSurfaceMaterial.SpriteBatch.Draw(OutputSurface, Vector2.Zero, Color.White);
                 RenderSurfaceMaterial.ResetState(graphicsDevice);
             }
         }
@@ -859,6 +978,13 @@ namespace Orts.Viewer3D
             renderItems.Clear();
             for (var i = 0; i < (int)RenderPrimitiveSequence.Sentinel; i++)
             {
+                // Ambient occlusion only affects the opaque world, so lights, particles and interiors drawn later are unaffected.
+                if (i == (int)RenderPrimitiveSequence.WorldBlended && IsAmbientOcclusionEnabled && RenderSurfaceMaterial != null)
+                    ApplyAmbientOcclusion(graphicsDevice);
+                // Post-processing happens before the overlays (HUD and windows), so they are not color graded.
+                if (i == (int)RenderPrimitiveSequence.OverlayOpaque && IsPostProcessingEnabled && RenderSurfaceMaterial != null)
+                    ApplyPostProcessing(graphicsDevice);
+
                 if (logging) Console.WriteLine("    {0} {{", (RenderPrimitiveSequence)i);
                 var sequence = RenderItems[i];
                 foreach (var sequenceMaterial in sequence)

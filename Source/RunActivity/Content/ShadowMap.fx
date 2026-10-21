@@ -151,6 +151,37 @@ VERTEX_OUTPUT_BLUR VSShadowMapVertBlur(in VERTEX_INPUT_BLUR In)
 	return Out;
 }
 
+// Wider blur for soft shadows: the taps are further apart, relying on linear filtering between texels.
+static const float SoftBlurTapOffset = 3.0;
+
+VERTEX_OUTPUT_BLUR VSShadowMapHorzBlurSoft(in VERTEX_INPUT_BLUR In)
+{
+	VERTEX_OUTPUT_BLUR Out;
+
+	float2 offsetTexCoord = In.TexCoord + float2(0.5, 0.5);
+
+	Out.Position = mul(In.Position, WorldViewProjection);
+	Out.SampleCentre = offsetTexCoord * ImageBlurStep;
+	Out.Sample_01 = (offsetTexCoord - float2(SoftBlurTapOffset, 0)) * ImageBlurStep;
+	Out.Sample_23 = (offsetTexCoord + float2(SoftBlurTapOffset, 0)) * ImageBlurStep;
+
+	return Out;
+}
+
+VERTEX_OUTPUT_BLUR VSShadowMapVertBlurSoft(in VERTEX_INPUT_BLUR In)
+{
+	VERTEX_OUTPUT_BLUR Out;
+
+	float2 offsetTexCoord = In.TexCoord + float2(0.5, 0.5);
+
+	Out.Position = mul(In.Position, WorldViewProjection);
+	Out.SampleCentre = offsetTexCoord * ImageBlurStep;
+	Out.Sample_01 = (offsetTexCoord - float2(0, SoftBlurTapOffset)) * ImageBlurStep;
+	Out.Sample_23 = (offsetTexCoord + float2(0, SoftBlurTapOffset)) * ImageBlurStep;
+
+	return Out;
+}
+
 ////////////////////    P I X E L   S H A D E R S    ///////////////////////////
 
 float4 PSShadowMap(in VERTEX_OUTPUT In) : COLOR0
@@ -207,6 +238,17 @@ technique ShadowMapBlur {
 	}
 	pass Blur_Y {
 		VertexShader = compile vs_4_0_level_9_1 VSShadowMapVertBlur();
+		PixelShader = compile ps_4_0_level_9_1 PSShadowMapBlur();
+	}
+}
+
+technique ShadowMapBlurSoft {
+	pass Blur_X {
+		VertexShader = compile vs_4_0_level_9_1 VSShadowMapHorzBlurSoft();
+		PixelShader = compile ps_4_0_level_9_1 PSShadowMapBlur();
+	}
+	pass Blur_Y {
+		VertexShader = compile vs_4_0_level_9_1 VSShadowMapVertBlurSoft();
 		PixelShader = compile ps_4_0_level_9_1 PSShadowMapBlur();
 	}
 }

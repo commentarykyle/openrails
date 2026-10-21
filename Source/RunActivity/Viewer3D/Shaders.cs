@@ -243,6 +243,38 @@ namespace Orts.Viewer3D
     }
 
     [CallOnThread("Render")]
+    public class PostProcessShader : Shader
+    {
+        readonly EffectParameter projectionScale;
+        readonly EffectParameter screenSize;
+        readonly EffectParameter depthTexture;
+        readonly EffectParameter sceneTexture;
+
+        public void SetAmbientOcclusionData(Texture2D depth, ref Matrix projection)
+        {
+            CurrentTechnique = Techniques["AmbientOcclusion"];
+            depthTexture.SetValue(depth);
+            projectionScale.SetValue(new Vector2(projection.M11 * 0.5f, projection.M22 * 0.5f));
+            screenSize.SetValue(new Vector2(depth.Width, depth.Height));
+        }
+
+        public void SetPostProcessData(Texture2D scene)
+        {
+            CurrentTechnique = Techniques["PostProcess"];
+            sceneTexture.SetValue(scene);
+        }
+
+        public PostProcessShader(GraphicsDevice graphicsDevice)
+            : base(graphicsDevice, "PostProcessShader")
+        {
+            projectionScale = Parameters["ProjectionScale"];
+            screenSize = Parameters["ScreenSize"];
+            depthTexture = Parameters["DepthTexture"];
+            sceneTexture = Parameters["SceneTexture"];
+        }
+    }
+
+    [CallOnThread("Render")]
     public class ShadowMapShader : Shader
     {
         readonly EffectParameter worldViewProjection;
